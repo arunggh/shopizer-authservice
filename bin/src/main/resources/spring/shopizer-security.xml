@@ -1,0 +1,78 @@
+<beans:beans xmlns="http://www.springframework.org/schema/security"
+			 xmlns:beans="http://www.springframework.org/schema/beans"
+			 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+			 xsi:schemaLocation="http://www.springframework.org/schema/beans
+	http://www.springframework.org/schema/beans/spring-beans.xsd
+
+
+	http://www.springframework.org/schema/security
+	http://www.springframework.org/schema/security/spring-security.xsd">
+	
+	<global-method-security secured-annotations="enabled" jsr250-annotations="enabled" pre-post-annotations="enabled"/>
+
+	<beans:bean id="customerFacade" class="com.salesmanager.shop.service.customer.CustomerFacadeImpl">
+	</beans:bean>
+	
+	<!-- JDBC Customer details -->
+	<beans:bean id="customerDetailsService"
+		class="com.salesmanager.shop.security.userdetailsservice.CustomerServicesImpl">
+	</beans:bean>
+	
+	<beans:bean id="jwtCustomerDetailsService"
+		class="com.salesmanager.shop.security.userdetailsservice.JWTCustomerServicesImpl">
+	</beans:bean>
+	
+	 <beans:bean id="jwtUserDetailsService"
+		class="com.salesmanager.shop.security.userdetailsservice.JWTAdminServicesImpl">
+	</beans:bean>
+	
+
+	<!-- JDBC User details -->
+	<beans:bean id="userDetailsService"
+		class="com.salesmanager.shop.security.userdetailsservice.UserServicesImpl">
+	</beans:bean>
+
+	<beans:bean id="passwordEncoder" class="org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder">
+	    <!-- strength 4 to 31 -->
+		<beans:constructor-arg value="11"/>
+	</beans:bean>
+	
+	<!-- spring security 4 -->
+	<http pattern="/resources/**" security="none" /><!-- remove css and other static resources -->
+	<http pattern="/layout/**" security="none" /><!-- remove css and other static resources -->
+	
+	<http pattern="/api/v1/auth/**"
+			create-session="stateless" 
+			use-expressions="true" 
+			authentication-manager-ref="jwtCustomerAuthenticationManager"
+			entry-point-ref="restAuthenticationEntryPoint">
+		  
+		  <intercept-url pattern="/api/v1/auth/register" access="permitAll" />
+		  <intercept-url pattern="/api/v1/auth/login" access="permitAll" />
+		  <intercept-url pattern="/api/v1/auth/refresh" access="permitAll" />
+		  <intercept-url pattern="/api/v1/auth/**" method="OPTIONS" access="permitAll"/>		
+	      <intercept-url pattern="/api/v1/auth/**" access="hasRole('AUTH_CUSTOMER')"/>
+
+	      <custom-filter ref="authenticationTokenFilter" before="FORM_LOGIN_FILTER"/>
+	      <logout />
+	      <csrf disabled="true"/>
+    </http>
+
+	<beans:bean id="authenticationTokenFilter"
+		class="com.salesmanager.shop.security.filter.AuthenticationTokenFilter">
+	</beans:bean>
+
+	<!-- Authenticates API -->
+ 	<authentication-manager id="jwtCustomerAuthenticationManager">
+		<authentication-provider user-service-ref="jwtCustomerDetailsService">
+			<password-encoder ref="passwordEncoder" hash="sha"/>
+		</authentication-provider>
+	</authentication-manager>
+	
+	<!-- This bean encrypts the authorization details of the connection. In
+		our example, the authorization details are stored as plain text. DO NOT USE 
+		THIS IN PRODUCTION. -->
+	<beans:bean id="textEncryptor" class="org.springframework.security.crypto.encrypt.Encryptors"
+		factory-method="noOpText" />
+
+</beans:beans>
